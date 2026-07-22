@@ -12,7 +12,7 @@ A personal, open-ended focus timer that adapts recovery time to the length of th
 - Automatic light and dark themes.
 - Responsive layout for desktop and mobile.
 - Optional browser notifications.
-- Local-only personal data with no account or analytics.
+- Local-first storage with optional private Supabase sync across devices.
 
 ## Recovery formula
 
@@ -50,21 +50,20 @@ npm test
 
 ## Personal data and storage
 
-Luwes stores its state, daily statistics, and session history in the browser's `localStorage`.
+Luwes always stores its current state in the browser's `localStorage`. When signed in, completed sessions are also synced to Supabase for cross-device history and profile totals. Active timers intentionally remain device-local.
 
-This is intentional for personal use:
+Without an account, it remains fully local:
 
-- No backend or database setup.
-- No account, password, API key, or hosting bill.
 - Works on static hosting such as GitHub Pages.
-- Data never leaves the current browser profile.
+- Clearing site data also clears local-only history.
 
-There are two important limitations:
+With an account:
 
-- Clearing site data also clears the history.
-- Data does not automatically sync between browsers or devices.
+- Completed sessions sync privately between signed-in devices.
+- Row Level Security restricts every session to its owning user.
+- The public frontend key is safe to commit; no privileged Supabase secret is included.
 
-A database is unnecessary for the current single-user goal. IndexedDB or a small hosted database can be added later if the app needs larger history, backups, or cross-device sync.
+Run [`supabase.sql`](supabase.sql) once in the Supabase SQL Editor before using cloud sync.
 
 ## Deploy with GitHub Pages
 
@@ -76,10 +75,12 @@ After pushing the repository, open **Settings → Pages** on GitHub, choose **De
 index.html          App structure
 styles.css         Responsive light and dark themes
 app.js             Timer, profile, history, and local persistence
+cloud.js           Supabase authentication and session sync
+supabase.sql        Database table and Row Level Security policy
 recovery.js        Recovery formula and time helpers
 recovery.test.js   Formula tests
 ```
 
 ## Privacy
 
-This project has no telemetry, third-party analytics, or remote data storage.
+This project has no telemetry or third-party analytics. Supabase receives account and completed-session data only when the user signs in.

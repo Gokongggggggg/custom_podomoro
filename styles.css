@@ -51,8 +51,12 @@ svg { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: 
 .topnav button { min-height: 36px; padding: 0 14px; border: 0; border-radius: 5px; color: var(--muted); background: transparent; font-size: 11px; font-weight: 750; transition: color .2s ease, background .2s ease; }
 .topnav button:hover { color: var(--ink); }
 .topnav button[aria-selected="true"] { color: var(--solid-fg); background: var(--solid-bg); }
-.local-pill { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
-.local-pill > span { width: 7px; height: 7px; border-radius: 50%; background: var(--break); box-shadow: 0 0 0 4px var(--status-halo); }
+.sync-pill { min-height: 44px; padding: 0 10px; display: flex; align-items: center; gap: 8px; border: 0; border-radius: 7px; color: var(--muted); background: transparent; font-size: 12px; transition: color .2s ease, background .2s ease; }
+.sync-pill:hover { color: var(--ink); background: var(--input-bg); }
+.sync-pill #syncDot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); box-shadow: 0 0 0 4px var(--history-line); }
+.sync-pill #syncDot.synced { background: var(--break); box-shadow: 0 0 0 4px var(--status-halo); }
+.sync-pill #syncDot.syncing { background: var(--focus); }
+.sync-pill #syncDot.error { background: var(--focus-dark); }
 .icon-button { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: var(--ink); border: 1px solid var(--line); background: transparent; transition: background .2s ease, color .2s ease; }
 .icon-button:hover, .icon-button.active { color: var(--solid-fg); background: var(--solid-bg); }
 .icon-button svg { width: 19px; }
@@ -134,6 +138,30 @@ kbd { padding: 2px 6px; border: 1px solid var(--line); border-bottom-width: 2px;
 .toast { position: fixed; z-index: 5; right: 22px; bottom: 22px; max-width: min(360px, calc(100% - 44px)); padding: 12px 16px; border-radius: 7px; color: var(--solid-fg); background: var(--solid-bg); box-shadow: var(--shadow); font-size: 13px; opacity: 0; transform: translateY(12px); pointer-events: none; transition: opacity .2s ease, transform .2s ease; }
 .toast.show { opacity: 1; transform: translateY(0); }
 
+.account-dialog { width: min(440px, calc(100% - 28px)); padding: 28px; border: 1px solid var(--line); border-radius: 14px; color: var(--ink); background: var(--surface); box-shadow: var(--shadow); }
+.account-dialog::backdrop { background: rgba(10, 12, 10, .58); backdrop-filter: blur(3px); }
+.dialog-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.dialog-header h2 { margin: 5px 0 0; font-family: Georgia, serif; font-size: 28px; font-weight: 400; letter-spacing: -.03em; }
+.dialog-kicker { color: var(--focus-dark); font-size: 9px; font-weight: 800; letter-spacing: .14em; }
+.dialog-close { flex: 0 0 44px; width: 44px; height: 44px; margin: -8px -8px 0 0; border: 0; border-radius: 50%; color: var(--muted); background: transparent; font-size: 26px; line-height: 1; }
+.dialog-close:hover { color: var(--ink); background: var(--input-bg); }
+.dialog-copy { margin: 22px 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.account-dialog form label { display: block; margin-top: 14px; }
+.account-dialog form label > span { display: block; margin-bottom: 7px; color: var(--muted); font-size: 11px; font-weight: 700; }
+.account-dialog input { width: 100%; min-height: 48px; padding: 0 13px; border: 1px solid var(--line); border-radius: 7px; color: var(--ink); background: var(--input-bg); outline: none; }
+.account-dialog input:focus { border-color: var(--focus); box-shadow: 0 0 0 3px var(--focus-ring-soft); }
+.auth-error { min-height: 20px; margin: 10px 0; color: var(--focus-dark); font-size: 12px; line-height: 1.5; }
+.auth-submit, .full-width { width: 100%; }
+.text-button { width: 100%; min-height: 44px; margin-top: 8px; border: 0; color: var(--break); background: transparent; font-size: 12px; font-weight: 750; }
+.text-button:hover { text-decoration: underline; text-underline-offset: 3px; }
+.text-button.danger { margin-top: 14px; color: var(--focus-dark); }
+.account-identity { margin: 24px 0 12px; padding: 14px; border-radius: 8px; background: var(--chip); }
+.account-identity span, .account-identity strong { display: block; overflow-wrap: anywhere; }
+.account-identity span { margin-bottom: 5px; color: var(--muted); font-size: 10px; }
+.account-identity strong { font-size: 14px; }
+.sync-detail { margin: 0 0 20px; color: var(--muted); font-size: 12px; line-height: 1.55; }
+.button:disabled, .text-button:disabled { cursor: wait; opacity: .5; }
+
 .profile-shell { width: min(1180px, calc(100% - 48px)); margin: 0 auto; padding: 56px 0 80px; }
 .profile-hero { display: grid; grid-template-columns: 1fr minmax(280px, 390px); align-items: end; gap: 48px; margin-bottom: 48px; }
 .profile-hero h1 { margin-bottom: 0; }
@@ -184,7 +212,7 @@ kbd { padding: 2px 6px; border: 1px solid var(--line); border-bottom-width: 2px;
 body.break-mode { --focus: var(--break); --focus-dark: var(--break); background: radial-gradient(circle at 16% 8%, var(--break-glow) 0, transparent 29rem), var(--break-page); }
 body.break-mode .button.primary { background: var(--break); border-color: var(--break); }
 
-button:focus-visible, a:focus-visible, summary:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 3px; }
+button:focus-visible, input:focus-visible, a:focus-visible, summary:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 3px; }
 [hidden] { display: none !important; }
 
 @media (max-width: 840px) {
@@ -202,7 +230,8 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 3px soli
 @media (max-width: 520px) {
   .topbar, .app-shell { width: min(100% - 28px, 1180px); }
   .topbar { height: 70px; }
-  .local-pill { display: none; }
+  .sync-pill { width: 44px; padding: 0; justify-content: center; }
+  .sync-pill #syncLabel { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .brand span { display: none; }
   .topnav button { padding: 0 11px; }
   .app-shell { padding: 32px 0 48px; }

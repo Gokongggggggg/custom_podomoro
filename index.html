@@ -21,7 +21,9 @@
         <button id="profileTab" type="button" aria-selected="false">Profile</button>
       </nav>
       <div class="header-actions">
-        <span class="local-pill"><span></span> saved locally</span>
+        <button class="sync-pill" id="accountButton" type="button" aria-haspopup="dialog">
+          <span id="syncDot"></span><span id="syncLabel">Local only</span>
+        </button>
         <button class="icon-button" id="notificationButton" type="button" aria-label="Enable notifications" title="Enable notifications">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>
         </button>
@@ -107,10 +109,10 @@
       <section id="profileView" class="profile-shell view" aria-labelledby="profileTitle" hidden>
         <header class="profile-hero">
           <div>
-            <div class="eyebrow"><span></span><span>PERSONAL · LOCAL ONLY</span></div>
+            <div class="eyebrow"><span></span><span id="profileStorageLabel">PERSONAL · LOCAL ONLY</span></div>
             <h1 id="profileTitle">Your focus<br /><em>in perspective.</em></h1>
           </div>
-          <p>See what you did today, how your focus changes across the week, and how recovery is calculated. Nothing leaves this browser.</p>
+          <p id="profileStorageDescription">See what you did today, how your focus changes across the week, and how recovery is calculated. Sign in to sync this history privately across devices.</p>
         </header>
 
         <section class="profile-stats" aria-label="Today's activity">
@@ -165,6 +167,29 @@
         </section>
       </section>
     </main>
+
+    <dialog class="account-dialog" id="accountDialog" aria-labelledby="accountTitle">
+      <div class="dialog-header">
+        <div><span class="dialog-kicker">PRIVATE SYNC</span><h2 id="accountTitle">Your Luwes account</h2></div>
+        <button class="dialog-close" id="closeAccountDialog" type="button" aria-label="Close account dialog">×</button>
+      </div>
+      <div id="signedOutPanel">
+        <p class="dialog-copy">Sign in with the same account on your laptop and phone. Completed sessions sync; the running timer stays on this device.</p>
+        <form id="authForm" novalidate>
+          <label for="emailInput"><span>Email</span><input id="emailInput" type="email" autocomplete="email" required /></label>
+          <label for="passwordInput"><span>Password</span><input id="passwordInput" type="password" autocomplete="current-password" minlength="6" required /></label>
+          <p class="auth-error" id="authError" role="alert"></p>
+          <button class="button primary auth-submit" id="signInButton" type="submit">Sign in</button>
+          <button class="text-button" id="signUpButton" type="button">Create an account instead</button>
+        </form>
+      </div>
+      <div id="signedInPanel" hidden>
+        <div class="account-identity"><span>Signed in as</span><strong id="accountEmail"></strong></div>
+        <p class="sync-detail" id="syncDetail">Your session history is synced.</p>
+        <button class="button secondary full-width" id="syncNowButton" type="button">Sync now</button>
+        <button class="text-button danger" id="signOutButton" type="button">Sign out</button>
+      </div>
+    </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <script type="module" src="app.js"></script>
