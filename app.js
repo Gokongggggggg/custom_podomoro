@@ -3,29 +3,27 @@ import { clearCloudSessions, onAuthChange, resendVerification, signIn, signOut, 
 
 const STORAGE_KEY = "luwes-focus-v1";
 const DAY_KEY = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" });
-
 const $ = (id) => document.getElementById(id);
+
 const elements = {
   clock: $("clock"), clockCaption: $("clockCaption"), modeLabel: $("modeLabel"), modeTitle: $("modeTitle"),
   modeDescription: $("modeDescription"), taskInput: $("taskInput"), primaryButton: $("primaryButton"),
   primaryText: $("primaryText"), primaryIcon: $("primaryIcon"), finishButton: $("finishButton"),
   recoveryHeading: $("recoveryHeading"), recoveryMinutes: $("recoveryMinutes"), focusBasis: $("focusBasis"),
-  recoveryAdvice: $("recoveryAdvice"), recoveryProgress: $("recoveryProgress"), todayDate: $("todayDate"),
-  todayFocus: $("todayFocus"), todaySessions: $("todaySessions"), todayRecovery: $("todayRecovery"),
-  historyList: $("historyList"), clearHistory: $("clearHistory"), notificationButton: $("notificationButton"),
-  toast: $("toast"), timerTab: $("timerTab"), profileTab: $("profileTab"), timerView: $("timerView"),
-  profileView: $("profileView"), profileTodayFocus: $("profileTodayFocus"),
-  profileTodaySessions: $("profileTodaySessions"), profileTodayBreaks: $("profileTodayBreaks"),
-  profileTodayContext: $("profileTodayContext"), weekTotal: $("weekTotal"), trendChart: $("trendChart"),
+  recoveryAdvice: $("recoveryAdvice"), recoveryProgress: $("recoveryProgress"), clearHistory: $("clearHistory"),
+  notificationButton: $("notificationButton"), toast: $("toast"), openBreakdown: $("openBreakdown"),
+  breakdownDialog: $("breakdownDialog"), closeBreakdown: $("closeBreakdown"),
+  consistencyDays: $("consistencyDays"), consistencyDots: $("consistencyDots"),
+  consistencyStreak: $("consistencyStreak"), consistencyToday: $("consistencyToday"),
+  breakdownCurrentStreak: $("breakdownCurrentStreak"), breakdownBestStreak: $("breakdownBestStreak"),
+  breakdownAverage: $("breakdownAverage"), weekTotal: $("weekTotal"), trendChart: $("trendChart"),
   trendSummary: $("trendSummary"), activityCount: $("activityCount"), profileHistory: $("profileHistory"),
   calculatorHours: $("calculatorHours"), calculatorMinutes: $("calculatorMinutes"),
   calculatorBreak: $("calculatorBreak"), calculationLine: $("calculationLine"), calculationReason: $("calculationReason"),
-  authView: $("authView"), appView: $("appView"), skipLink: $("skipLink"),
-  syncDot: $("syncDot"), syncLabel: $("syncLabel"), authForm: $("authForm"),
-  emailInput: $("emailInput"), passwordInput: $("passwordInput"), authError: $("authError"),
-  signInButton: $("signInButton"), signUpButton: $("signUpButton"),
-  resendVerificationButton: $("resendVerificationButton"),
-  signOutButton: $("signOutButton"),
+  authView: $("authView"), appView: $("appView"), skipLink: $("skipLink"), syncDot: $("syncDot"),
+  syncLabel: $("syncLabel"), authForm: $("authForm"), emailInput: $("emailInput"), passwordInput: $("passwordInput"),
+  authError: $("authError"), signInButton: $("signInButton"), signUpButton: $("signUpButton"),
+  resendVerificationButton: $("resendVerificationButton"), signOutButton: $("signOutButton"),
 };
 
 const blankState = () => ({
@@ -120,7 +118,7 @@ function beep() {
     oscillator.connect(gain).connect(context.destination);
     oscillator.start();
     oscillator.stop(context.currentTime + 0.36);
-  } catch { /* Sound is an enhancement only. */ }
+  } catch { /* Sound is optional. */ }
 }
 
 function startOrResume() {
@@ -151,7 +149,7 @@ function finishFocus() {
   }
   const breakMinutes = calculateRecoveryMinutes(focusMs);
   state.sessions.unshift({
-    id: Date.now(), date: new Date().toISOString(), task: state.task || "Untitled session",
+    id: Date.now(), date: new Date().toISOString(), task: state.task.trim() || "Untitled session",
     focusMs, recoveryMs: breakMinutes * 60_000, actualRecoveryMs: 0,
   });
   state.sessions = state.sessions.slice(0, 50);
@@ -185,13 +183,13 @@ function render(now = Date.now()) {
   const currentElapsed = elapsed(now);
   const isBreak = state.mode === "break";
   const isFocus = state.mode === "focus";
-  document.body.classList.toggle("break-mode", isBreak && elements.profileView.hidden);
+  document.body.classList.toggle("break-mode", isBreak);
 
   if (isBreak) {
     const remaining = Math.max(0, state.breakDurationMs - currentElapsed);
     elements.clock.textContent = formatClock(remaining);
     elements.modeLabel.textContent = state.running ? "RECOVERY IN PROGRESS" : "RECOVERY PAUSED";
-    elements.modeTitle.innerHTML = "Take a break.<br><em>You earned it.</em>";
+    elements.modeTitle.textContent = "Take a real break.";
     elements.modeDescription.textContent = recoveryActivity(state.sessions[0]?.focusMs || 0);
     elements.clockCaption.textContent = `${Math.round(state.breakDurationMs / 60_000)} minutes from your last focus session`;
     elements.primaryText.textContent = state.running ? "Pause recovery" : "Resume recovery";
@@ -200,105 +198,81 @@ function render(now = Date.now()) {
     elements.recoveryHeading.textContent = "RECOVERY IN PROGRESS";
     elements.recoveryMinutes.textContent = Math.ceil(remaining / 60_000);
     elements.focusBasis.textContent = `${formatClock(currentElapsed)} elapsed`;
+    elements.recoveryAdvice.textContent = recoveryActivity(state.sessions[0]?.focusMs || 0);
     elements.recoveryProgress.style.width = `${Math.min(100, currentElapsed / state.breakDurationMs * 100)}%`;
     elements.taskInput.disabled = true;
     if (remaining <= 0 && state.running) finishBreak(true);
   } else {
     elements.clock.textContent = formatClock(currentElapsed);
     elements.modeLabel.textContent = isFocus ? (state.running ? "FOCUS IN PROGRESS" : "FOCUS PAUSED") : "READY WHEN YOU ARE";
-    elements.modeTitle.innerHTML = "Stay focused<br><em>while it flows.</em>";
-    elements.modeDescription.textContent = "No alarm at minute 25. Keep going—your recovery time adapts when you finish.";
+    elements.modeTitle.textContent = isFocus ? (state.running ? "Stay with it." : "Focus paused.") : "Ready when you are.";
+    elements.modeDescription.textContent = isFocus
+      ? "Keep going while the work still feels productive. Your recovery adapts when you finish."
+      : "Start without choosing an end time.";
     elements.clockCaption.textContent = "timer counts up";
     elements.primaryText.textContent = isFocus ? (state.running ? "Pause focus" : "Resume focus") : "Start focusing";
     elements.finishButton.hidden = !isFocus;
     elements.finishButton.querySelector("span").textContent = "Finish focus";
     const recovery = calculateRecoveryMinutes(currentElapsed);
-    elements.recoveryHeading.textContent = "IF YOU STOP NOW";
+    elements.recoveryHeading.textContent = "RECOVERY IF YOU STOP NOW";
     elements.recoveryMinutes.textContent = recovery;
     elements.focusBasis.textContent = currentElapsed >= 60_000 ? `${Math.floor(currentElapsed / 60_000)}m focused` : "starting minimum";
     elements.recoveryAdvice.textContent = recoveryActivity(currentElapsed);
     elements.recoveryProgress.style.width = `${Math.min(100, recovery / 30 * 100)}%`;
-    elements.taskInput.disabled = isFocus;
-    if (!isFocus && elements.taskInput.value !== state.task) elements.taskInput.value = state.task;
+    elements.taskInput.disabled = false;
+    if (document.activeElement !== elements.taskInput && elements.taskInput.value !== state.task) elements.taskInput.value = state.task;
   }
 
   elements.primaryIcon.innerHTML = state.running ? '<path d="M8 5v14M16 5v14"/>' : '<path d="m8 5 11 7-11 7z"/>';
-  document.title = !elements.profileView.hidden
-    ? "Profile · Focus timer"
-    : state.mode === "idle"
-      ? "Focus timer — no forced cutoff"
-      : `${elements.clock.textContent} · ${isBreak ? "Recover" : "Focus"}`;
-  renderHistory();
+  document.title = state.mode === "idle"
+    ? "Focus timer — no forced cutoff"
+    : `${elements.clock.textContent} · ${isBreak ? "Recover" : "Focus"}`;
+  renderInsights();
 }
 
-function renderHistory() {
+function renderInsights() {
   const todayKey = DAY_KEY.format(new Date());
   const today = state.sessions.filter((session) => DAY_KEY.format(new Date(session.date)) === todayKey);
   const activeFocusMs = state.mode === "focus" ? elapsed() : 0;
-  const activeBreakMs = state.mode === "break" ? Math.min(elapsed(), state.breakDurationMs) : 0;
-  const focusMs = today.reduce((sum, session) => sum + session.focusMs, 0) + activeFocusMs;
-  const recoveryMs = today.reduce((sum, session) => sum + (session.actualRecoveryMs || 0), 0) + activeBreakMs;
-  elements.todayFocus.textContent = formatMinutes(focusMs);
-  elements.todaySessions.textContent = today.length;
-  elements.todayRecovery.textContent = formatMinutes(recoveryMs);
-  elements.todayDate.textContent = new Intl.DateTimeFormat("en-US", { weekday: "short", day: "numeric", month: "short", timeZone: "Asia/Jakarta" }).format(new Date());
-  elements.clearHistory.hidden = state.sessions.length === 0;
-  renderProfile();
-
-  if (!state.sessions.length) {
-    elements.historyList.innerHTML = '<li class="empty-history">No sessions yet. Your first one starts here.</li>';
-    return;
-  }
-  elements.historyList.replaceChildren(...state.sessions.slice(0, 4).map((session) => {
-    const li = document.createElement("li");
-    const title = document.createElement("strong");
-    const time = document.createElement("time");
-    const duration = document.createElement("span");
-    title.textContent = session.task;
-    time.dateTime = session.date;
-    time.textContent = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(session.date));
-    duration.className = "duration";
-    duration.textContent = `${formatMinutes(session.focusMs)} focus · ${formatMinutes(session.actualRecoveryMs || 0)} break`;
-    li.append(title, time, duration);
-    return li;
-  }));
-}
-
-function renderProfile() {
-  const todayKey = DAY_KEY.format(new Date());
-  const today = state.sessions.filter((session) => DAY_KEY.format(new Date(session.date)) === todayKey);
-  const activeFocusMs = state.mode === "focus" ? elapsed() : 0;
-  const activeBreakMs = state.mode === "break" ? Math.min(elapsed(), state.breakDurationMs) : 0;
   const todayFocusMs = today.reduce((sum, session) => sum + session.focusMs, 0) + activeFocusMs;
-  const todayBreakMs = today.reduce((sum, session) => sum + (session.actualRecoveryMs || 0), 0) + activeBreakMs;
-  const longestToday = Math.max(activeFocusMs, today.reduce((longest, session) => Math.max(longest, session.focusMs), 0));
-
-  elements.profileTodayFocus.textContent = formatDuration(todayFocusMs);
-  elements.profileTodaySessions.textContent = today.length;
-  elements.profileTodayBreaks.textContent = formatDuration(todayBreakMs);
-  elements.profileTodayContext.textContent = activeFocusMs
-    ? `${formatDuration(activeFocusMs)} in current session`
-    : longestToday
-      ? `Longest session: ${formatDuration(longestToday)}`
-      : "No completed sessions";
-
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(Date.now() - (6 - index) * 86_400_000);
     const key = DAY_KEY.format(date);
     const completedFocusMs = state.sessions
       .filter((session) => DAY_KEY.format(new Date(session.date)) === key)
       .reduce((sum, session) => sum + session.focusMs, 0);
-    const focusMs = completedFocusMs + (key === todayKey ? activeFocusMs : 0);
     return {
-      key,
-      date,
-      focusMs,
+      key, date, focusMs: completedFocusMs + (key === todayKey ? activeFocusMs : 0),
       label: new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: "Asia/Jakarta" }).format(date),
     };
   });
   const maxFocus = Math.max(...days.map((day) => day.focusMs), 1);
   const weekFocus = days.reduce((sum, day) => sum + day.focusMs, 0);
   const strongestDay = days.reduce((best, day) => day.focusMs > best.focusMs ? day : best, days[0]);
+  const activeDays = days.filter((day) => day.focusMs > 0).length;
+  const activeKeys = new Set(state.sessions.filter((session) => session.focusMs > 0).map((session) => DAY_KEY.format(new Date(session.date))));
+  if (activeFocusMs > 0) activeKeys.add(todayKey);
+  const currentStreak = calculateCurrentStreak(activeKeys, todayKey);
+  const bestStreak = calculateBestStreak(activeKeys);
+  const averageSession = state.sessions.length
+    ? state.sessions.reduce((sum, session) => sum + session.focusMs, 0) / state.sessions.length
+    : 0;
+
+  elements.consistencyDays.textContent = `${activeDays} / 7`;
+  elements.consistencyToday.textContent = formatDuration(todayFocusMs);
+  elements.consistencyStreak.textContent = formatDays(currentStreak);
+  elements.consistencyDots.replaceChildren(...days.map((day) => {
+    const dot = document.createElement("span");
+    dot.className = day.focusMs > 0 ? "active" : "";
+    dot.classList.toggle("today", day.key === todayKey);
+    dot.title = `${day.label}: ${formatDuration(day.focusMs)}`;
+    return dot;
+  }));
+  elements.consistencyDots.setAttribute("aria-label", `${activeDays} active days in the last seven days`);
+  elements.breakdownCurrentStreak.textContent = formatDays(currentStreak);
+  elements.breakdownBestStreak.textContent = formatDays(bestStreak);
+  elements.breakdownAverage.textContent = formatDuration(averageSession);
+  elements.clearHistory.hidden = state.sessions.length === 0;
 
   elements.weekTotal.textContent = `${formatDuration(weekFocus)} total`;
   elements.trendChart.replaceChildren(...days.map((day) => {
@@ -346,6 +320,39 @@ function renderProfile() {
   }
 }
 
+function calculateCurrentStreak(activeKeys, todayKey) {
+  const cursor = dateFromDayKey(todayKey);
+  if (!activeKeys.has(todayKey)) cursor.setUTCDate(cursor.getUTCDate() - 1);
+  let streak = 0;
+  while (activeKeys.has(cursor.toISOString().slice(0, 10))) {
+    streak += 1;
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+  }
+  return streak;
+}
+
+function calculateBestStreak(activeKeys) {
+  const keys = [...activeKeys].sort();
+  let best = 0;
+  let run = 0;
+  let previous = null;
+  keys.forEach((key) => {
+    const date = dateFromDayKey(key);
+    run = previous && (date - previous) / 86_400_000 === 1 ? run + 1 : 1;
+    best = Math.max(best, run);
+    previous = date;
+  });
+  return best;
+}
+
+function dateFromDayKey(key) {
+  return new Date(`${key}T00:00:00Z`);
+}
+
+function formatDays(days) {
+  return `${days} ${days === 1 ? "day" : "days"}`;
+}
+
 function updateCalculator() {
   const hours = Math.min(24, Math.max(0, Number.parseInt(elements.calculatorHours.value, 10) || 0));
   const minutes = Math.min(59, Math.max(0, Number.parseInt(elements.calculatorMinutes.value, 10) || 0));
@@ -367,21 +374,6 @@ function updateCalculator() {
   else elements.calculationReason.textContent = "No limit or rounding adjustment is needed.";
 }
 
-function setView(view) {
-  const showProfile = view === "profile";
-  elements.timerView.hidden = showProfile;
-  elements.profileView.hidden = !showProfile;
-  elements.timerTab.setAttribute("aria-selected", String(!showProfile));
-  elements.profileTab.setAttribute("aria-selected", String(showProfile));
-  render();
-}
-
-function formatMinutes(milliseconds) {
-  if (milliseconds <= 0) return "0m";
-  if (milliseconds < 60_000) return "<1m";
-  return `${Math.round(milliseconds / 60_000)}m`;
-}
-
 function formatDuration(milliseconds) {
   const totalMinutes = Math.round(Math.max(0, milliseconds) / 60_000);
   if (!totalMinutes) return "0m";
@@ -397,12 +389,19 @@ function formatPlan(totalMinutes) {
 }
 
 elements.primaryButton.addEventListener("click", toggleTimer);
-elements.timerTab.addEventListener("click", () => { location.hash = "timer"; });
-elements.profileTab.addEventListener("click", () => { location.hash = "profile"; });
+elements.openBreakdown.addEventListener("click", () => elements.breakdownDialog.showModal());
+elements.closeBreakdown.addEventListener("click", () => elements.breakdownDialog.close());
+elements.breakdownDialog.addEventListener("click", (event) => {
+  if (event.target === elements.breakdownDialog) elements.breakdownDialog.close();
+});
 elements.calculatorHours.addEventListener("input", updateCalculator);
 elements.calculatorMinutes.addEventListener("input", updateCalculator);
 elements.finishButton.addEventListener("click", () => state.mode === "break" ? finishBreak(false) : finishFocus());
-elements.taskInput.addEventListener("input", () => { if (state.mode === "idle") { state.task = elements.taskInput.value; save(); } });
+elements.taskInput.addEventListener("input", () => {
+  if (state.mode === "break") return;
+  state.task = elements.taskInput.value;
+  save();
+});
 elements.clearHistory.addEventListener("click", () => {
   if (!confirm("Clear your entire session history? This cannot be undone.")) return;
   state.sessions = [];
@@ -460,13 +459,12 @@ elements.notificationButton.addEventListener("click", async () => {
   showToast(permission === "granted" ? "Notifications enabled." : "Notifications were not allowed.");
 });
 document.addEventListener("keydown", (event) => {
-  if (!elements.profileView.hidden) return;
+  if (elements.breakdownDialog.open) return;
   if (event.code !== "Space" || event.repeat || event.target.matches("input, button, summary, a")) return;
   event.preventDefault();
   toggleTimer();
 });
 document.addEventListener("visibilitychange", () => { if (!document.hidden) render(); });
-window.addEventListener("hashchange", () => setView(location.hash === "#profile" ? "profile" : "timer"));
 
 elements.taskInput.value = state.task;
 if ("Notification" in window) elements.notificationButton.classList.toggle("active", Notification.permission === "granted");
@@ -478,5 +476,5 @@ onAuthChange((session) => {
   renderAuthState();
   if (currentUser && currentUser.id !== previousUserId) syncCloud({ quiet: true });
 });
-setView(location.hash === "#profile" ? "profile" : "timer");
+render();
 setInterval(() => { if (state.mode !== "idle") render(); }, 500);

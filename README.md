@@ -6,7 +6,9 @@ A personal, open-ended focus timer that adapts recovery time to the length of th
 
 - Open-ended focus timer with pause and resume.
 - Dynamic recovery recommendation based on actual focus time.
-- Personal profile with today's activity and a seven-day focus trend.
+- At-a-glance consistency beside the timer: active days, streak, and today's focus.
+- Click-through breakdown with seven-day trends, averages, and complete activity history.
+- Task names remain editable while a focus session is running or paused.
 - Complete session history with focus and actual break durations.
 - What-if recovery calculator with a transparent formula breakdown.
 - Automatic light and dark themes.
@@ -70,7 +72,7 @@ After pushing the repository, open **Settings → Pages** on GitHub, choose **De
 ```text
 index.html          App structure
 styles.css         Responsive light and dark themes
-app.js             Timer, profile, history, and local persistence
+app.js             Timer, consistency insights, history, and local persistence
 cloud.js           Supabase authentication and session sync
 supabase.sql        Database table and Row Level Security policy
 recovery.js        Recovery formula and time helpers
