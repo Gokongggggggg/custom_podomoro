@@ -20,14 +20,12 @@ const elements = {
   trendSummary: $("trendSummary"), activityCount: $("activityCount"), profileHistory: $("profileHistory"),
   calculatorHours: $("calculatorHours"), calculatorMinutes: $("calculatorMinutes"),
   calculatorBreak: $("calculatorBreak"), calculationLine: $("calculationLine"), calculationReason: $("calculationReason"),
-  accountButton: $("accountButton"), syncDot: $("syncDot"), syncLabel: $("syncLabel"),
-  accountDialog: $("accountDialog"), closeAccountDialog: $("closeAccountDialog"), authForm: $("authForm"),
+  authView: $("authView"), appView: $("appView"), skipLink: $("skipLink"),
+  syncDot: $("syncDot"), syncLabel: $("syncLabel"), authForm: $("authForm"),
   emailInput: $("emailInput"), passwordInput: $("passwordInput"), authError: $("authError"),
-  signInButton: $("signInButton"), signUpButton: $("signUpButton"), signedOutPanel: $("signedOutPanel"),
+  signInButton: $("signInButton"), signUpButton: $("signUpButton"),
   resendVerificationButton: $("resendVerificationButton"),
-  signedInPanel: $("signedInPanel"), accountEmail: $("accountEmail"), syncDetail: $("syncDetail"),
-  syncNowButton: $("syncNowButton"), signOutButton: $("signOutButton"),
-  profileStorageLabel: $("profileStorageLabel"), profileStorageDescription: $("profileStorageDescription"),
+  signOutButton: $("signOutButton"),
 };
 
 const blankState = () => ({
@@ -65,16 +63,16 @@ async function syncCloud({ quiet = false } = {}) {
     return;
   }
   syncing = true;
-  renderAccount("syncing");
+  renderAuthState("syncing");
   try {
     state.sessions = await syncSessions(state.sessions, currentUser.id);
     save();
     render();
-    renderAccount("synced");
+    renderAuthState("synced");
     if (!quiet) showToast("Session history synced.");
   } catch (error) {
     console.error(error);
-    renderAccount("error");
+    renderAuthState("error");
     if (!quiet) showToast("Sync failed. Your local data is still safe.");
   } finally {
     syncing = false;
@@ -85,20 +83,15 @@ async function syncCloud({ quiet = false } = {}) {
   }
 }
 
-function renderAccount(status = currentUser ? "synced" : "local") {
+function renderAuthState(status = currentUser ? "synced" : "signed-out") {
   const signedIn = Boolean(currentUser);
-  elements.signedOutPanel.hidden = signedIn;
-  elements.signedInPanel.hidden = !signedIn;
+  elements.authView.hidden = signedIn;
+  elements.appView.hidden = !signedIn;
+  document.body.classList.toggle("auth-screen", !signedIn);
+  elements.skipLink.href = signedIn ? "#main" : "#authForm";
+  elements.skipLink.textContent = signedIn ? "Skip to timer" : "Skip to sign in";
   elements.syncDot.className = status;
-  elements.syncLabel.textContent = status === "syncing" ? "Syncing…" : status === "error" ? "Sync retry needed" : signedIn ? "Synced" : "Local only";
-  elements.accountEmail.textContent = currentUser?.email || "";
-  elements.syncDetail.textContent = status === "error"
-    ? "Cloud sync failed. Your data remains saved locally."
-    : "Your completed session history is synced across devices.";
-  elements.profileStorageLabel.textContent = signedIn ? "PERSONAL · PRIVATE CLOUD SYNC" : "PERSONAL · LOCAL ONLY";
-  elements.profileStorageDescription.textContent = signedIn
-    ? "Your completed sessions sync privately across your signed-in devices. The active timer stays on this device."
-    : "See what you did today, how your focus changes across the week, and how recovery is calculated. Sign in to sync this history privately across devices.";
+  elements.syncLabel.textContent = status === "syncing" ? "Syncing…" : status === "error" ? "Sync retry needed" : "Synced";
 }
 
 function showToast(message) {
@@ -421,11 +414,6 @@ elements.clearHistory.addEventListener("click", () => {
       .catch(() => showToast("Local history cleared, but cloud deletion failed."));
   } else showToast("Session history cleared.");
 });
-elements.accountButton.addEventListener("click", () => elements.accountDialog.showModal());
-elements.closeAccountDialog.addEventListener("click", () => elements.accountDialog.close());
-elements.accountDialog.addEventListener("click", (event) => {
-  if (event.target === elements.accountDialog) elements.accountDialog.close();
-});
 elements.authForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!elements.authForm.reportValidity()) return;
@@ -459,13 +447,12 @@ elements.resendVerificationButton.addEventListener("click", async () => {
 elements.signOutButton.addEventListener("click", async () => {
   elements.signOutButton.disabled = true;
   try {
+    if (state.running) pause();
     await signOut();
-    elements.accountDialog.close();
-    showToast("Signed out. Local data remains on this device.");
+    showToast("Signed out.");
   } catch (error) { showToast(error.message); }
   finally { elements.signOutButton.disabled = false; }
 });
-elements.syncNowButton.addEventListener("click", () => syncCloud());
 elements.notificationButton.addEventListener("click", async () => {
   if (!("Notification" in window)) return showToast("This browser does not support notifications.");
   const permission = await Notification.requestPermission();
@@ -484,11 +471,11 @@ window.addEventListener("hashchange", () => setView(location.hash === "#profile"
 elements.taskInput.value = state.task;
 if ("Notification" in window) elements.notificationButton.classList.toggle("active", Notification.permission === "granted");
 updateCalculator();
-renderAccount();
+renderAuthState();
 onAuthChange((session) => {
   const previousUserId = currentUser?.id;
   currentUser = session?.user || null;
-  renderAccount();
+  renderAuthState();
   if (currentUser && currentUser.id !== previousUserId) syncCloud({ quiet: true });
 });
 setView(location.hash === "#profile" ? "profile" : "timer");

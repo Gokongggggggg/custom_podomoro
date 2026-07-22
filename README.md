@@ -12,7 +12,7 @@ A personal, open-ended focus timer that adapts recovery time to the length of th
 - Automatic light and dark themes.
 - Responsive layout for desktop and mobile.
 - Optional browser notifications.
-- Local-first storage with optional private Supabase sync across devices.
+- Authentication-first landing page with private Supabase sync across devices.
 
 ## Recovery formula
 
@@ -50,16 +50,12 @@ npm test
 
 ## Personal data and storage
 
-The app always stores its current state in the browser's `localStorage`. When signed in, completed sessions are also synced to Supabase for cross-device history and profile totals. Active timers intentionally remain device-local.
+An account is required to enter the timer. Completed sessions sync to Supabase for cross-device history and profile totals. The active timer is cached in `localStorage` and intentionally remains device-local.
 
-Without an account, it remains fully local:
+Data behavior:
 
-- Works on static hosting such as GitHub Pages.
-- Clearing site data also clears local-only history.
-
-With an account:
-
-- Completed sessions sync privately between signed-in devices.
+- Signed-out visitors see the landing and login page only.
+- Completed sessions sync between signed-in devices.
 - Row Level Security restricts every session to its owning user.
 - The public frontend key is safe to commit; no privileged Supabase secret is included.
 
