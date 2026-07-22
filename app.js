@@ -1,4 +1,5 @@
 import { calculateRecoveryMinutes, formatClock, recoveryActivity } from "./recovery.js";
+import { clearCloudSessions, onAuthChange, signIn, signOut, signUp, syncSessions } from "./cloud.js";
 
 const STORAGE_KEY = "luwes-focus-v1";
 const DAY_KEY = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" });
@@ -19,6 +20,13 @@ const elements = {
   trendSummary: $("trendSummary"), activityCount: $("activityCount"), profileHistory: $("profileHistory"),
   calculatorHours: $("calculatorHours"), calculatorMinutes: $("calculatorMinutes"),
   calculatorBreak: $("calculatorBreak"), calculationLine: $("calculationLine"), calculationReason: $("calculationReason"),
+  accountButton: $("accountButton"), syncDot: $("syncDot"), syncLabel: $("syncLabel"),
+  accountDialog: $("accountDialog"), closeAccountDialog: $("closeAccountDialog"), authForm: $("authForm"),
+  emailInput: $("emailInput"), passwordInput: $("passwordInput"), authError: $("authError"),
+  signInButton: $("signInButton"), signUpButton: $("signUpButton"), signedOutPanel: $("signedOutPanel"),
+  signedInPanel: $("signedInPanel"), accountEmail: $("accountEmail"), syncDetail: $("syncDetail"),
+  syncNowButton: $("syncNowButton"), signOutButton: $("signOutButton"),
+  profileStorageLabel: $("profileStorageLabel"), profileStorageDescription: $("profileStorageDescription"),
 };
 
 const blankState = () => ({
@@ -37,6 +45,9 @@ function loadState() {
 
 let state = loadState();
 let toastTimer;
+let currentUser = null;
+let syncing = false;
+let syncPending = false;
 
 function elapsed(now = Date.now()) {
   return state.accumulatedMs + (state.running && state.activeSince ? now - state.activeSince : 0);
@@ -44,6 +55,49 @@ function elapsed(now = Date.now()) {
 
 function save() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+async function syncCloud({ quiet = false } = {}) {
+  if (!currentUser) return;
+  if (syncing) {
+    syncPending = true;
+    return;
+  }
+  syncing = true;
+  renderAccount("syncing");
+  try {
+    state.sessions = await syncSessions(state.sessions, currentUser.id);
+    save();
+    render();
+    renderAccount("synced");
+    if (!quiet) showToast("Session history synced.");
+  } catch (error) {
+    console.error(error);
+    renderAccount("error");
+    if (!quiet) showToast("Sync failed. Your local data is still safe.");
+  } finally {
+    syncing = false;
+    if (syncPending) {
+      syncPending = false;
+      syncCloud({ quiet: true });
+    }
+  }
+}
+
+function renderAccount(status = currentUser ? "synced" : "local") {
+  const signedIn = Boolean(currentUser);
+  elements.signedOutPanel.hidden = signedIn;
+  elements.signedInPanel.hidden = !signedIn;
+  elements.syncDot.className = status;
+  elements.syncLabel.textContent = status === "syncing" ? "Syncing…" : status === "error" ? "Sync retry needed" : signedIn ? "Synced" : "Local only";
+  elements.accountEmail.textContent = currentUser?.email || "";
+  elements.syncDetail.textContent = status === "error"
+    ? "Cloud sync failed. Your data remains saved locally."
+    : "Your completed session history is synced across devices.";
+  elements.profileStorageLabel.textContent = signedIn ? "PERSONAL · PRIVATE CLOUD SYNC" : "PERSONAL · LOCAL ONLY";
+  elements.profileStorageDescription.textContent = signedIn
+    ? "Your completed sessions sync privately across your signed-in devices. The active timer stays on this device."
+    : "See what you did today, how your focus changes across the week, and how recovery is calculated. Sign in to sync this history privately across devices.";
 }
 
 function showToast(message) {
@@ -113,6 +167,7 @@ function finishFocus() {
   state.activeSince = Date.now();
   state.breakDurationMs = breakMinutes * 60_000;
   save();
+  syncCloud({ quiet: true });
   announce("Time to recover", `${breakMinutes} minutes. ${recoveryActivity(focusMs)}`);
   render();
 }
@@ -122,6 +177,7 @@ function finishBreak(completed = false) {
   if (state.sessions[0]) state.sessions[0].actualRecoveryMs = actual;
   state = { ...state, mode: "idle", running: false, accumulatedMs: 0, activeSince: null, breakDurationMs: 0, task: "" };
   save();
+  syncCloud({ quiet: true });
   if (completed) announce("Recovery complete", "Start another session whenever you are ready.");
   else showToast("Recovery ended. Start again whenever you are ready.");
   render();
@@ -358,8 +414,47 @@ elements.clearHistory.addEventListener("click", () => {
   state.sessions = [];
   save();
   render();
-  showToast("Session history cleared.");
+  if (currentUser) {
+    clearCloudSessions()
+      .then(() => showToast("Session history cleared everywhere."))
+      .catch(() => showToast("Local history cleared, but cloud deletion failed."));
+  } else showToast("Session history cleared.");
 });
+elements.accountButton.addEventListener("click", () => elements.accountDialog.showModal());
+elements.closeAccountDialog.addEventListener("click", () => elements.accountDialog.close());
+elements.accountDialog.addEventListener("click", (event) => {
+  if (event.target === elements.accountDialog) elements.accountDialog.close();
+});
+elements.authForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!elements.authForm.reportValidity()) return;
+  elements.authError.textContent = "";
+  elements.signInButton.disabled = true;
+  elements.signInButton.textContent = "Signing in…";
+  try { await signIn(elements.emailInput.value.trim(), elements.passwordInput.value); }
+  catch (error) { elements.authError.textContent = error.message; }
+  finally { elements.signInButton.disabled = false; elements.signInButton.textContent = "Sign in"; }
+});
+elements.signUpButton.addEventListener("click", async () => {
+  if (!elements.authForm.reportValidity()) return;
+  elements.authError.textContent = "";
+  elements.signUpButton.disabled = true;
+  try {
+    const signedIn = await signUp(elements.emailInput.value.trim(), elements.passwordInput.value);
+    if (!signedIn) elements.authError.textContent = "Account created. Check your email to confirm it, then sign in.";
+  } catch (error) { elements.authError.textContent = error.message; }
+  finally { elements.signUpButton.disabled = false; }
+});
+elements.signOutButton.addEventListener("click", async () => {
+  elements.signOutButton.disabled = true;
+  try {
+    await signOut();
+    elements.accountDialog.close();
+    showToast("Signed out. Local data remains on this device.");
+  } catch (error) { showToast(error.message); }
+  finally { elements.signOutButton.disabled = false; }
+});
+elements.syncNowButton.addEventListener("click", () => syncCloud());
 elements.notificationButton.addEventListener("click", async () => {
   if (!("Notification" in window)) return showToast("This browser does not support notifications.");
   const permission = await Notification.requestPermission();
@@ -378,5 +473,12 @@ window.addEventListener("hashchange", () => setView(location.hash === "#profile"
 elements.taskInput.value = state.task;
 if ("Notification" in window) elements.notificationButton.classList.toggle("active", Notification.permission === "granted");
 updateCalculator();
+renderAccount();
+onAuthChange((session) => {
+  const previousUserId = currentUser?.id;
+  currentUser = session?.user || null;
+  renderAccount();
+  if (currentUser && currentUser.id !== previousUserId) syncCloud({ quiet: true });
+});
 setView(location.hash === "#profile" ? "profile" : "timer");
 setInterval(() => { if (state.mode !== "idle") render(); }, 500);
