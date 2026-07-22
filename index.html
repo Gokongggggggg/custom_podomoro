@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f4f1e9" />
+    <meta name="description" content="An open-ended focus timer with recovery time that adapts to your actual session." />
+    <title>Luwes — focus without a forced cutoff</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23e35d3f'/%3E%3Cpath d='M9 7v11a7 7 0 0 0 14 0V9m-4 0 4-4 4 4' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to timer</a>
+    <header class="topbar">
+      <a class="brand" href="#timer" aria-label="Luwes timer">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M9 5v13a7 7 0 0 0 14 0V9"/><path d="m19 9 4-4 4 4"/></svg>
+        <span>Luwes</span>
+      </a>
+      <nav class="topnav" aria-label="Primary navigation">
+        <button id="timerTab" type="button" aria-selected="true">Timer</button>
+        <button id="profileTab" type="button" aria-selected="false">Profile</button>
+      </nav>
+      <div class="header-actions">
+        <span class="local-pill"><span></span> saved locally</span>
+        <button class="icon-button" id="notificationButton" type="button" aria-label="Enable notifications" title="Enable notifications">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main id="main">
+      <div id="timerView" class="app-shell view">
+        <section class="timer-panel" aria-labelledby="modeTitle">
+        <div class="eyebrow"><span id="statusDot"></span><span id="modeLabel">READY WHEN YOU ARE</span></div>
+        <h1 id="modeTitle">Stay focused<br /><em>while it flows.</em></h1>
+        <p class="intro" id="modeDescription">No alarm at minute 25. Keep going—your recovery time adapts when you finish.</p>
+
+        <label class="task-field" for="taskInput">
+          <span>What are you working on?</span>
+          <input id="taskInput" maxlength="80" autocomplete="off" placeholder="e.g. Read chapter four" />
+        </label>
+
+        <div class="clock-wrap">
+          <div class="clock" id="clock" role="timer" aria-live="off" aria-label="Waktu berjalan">00:00</div>
+          <div class="clock-caption" id="clockCaption">timer counts up</div>
+        </div>
+
+        <div class="controls">
+          <button class="button primary" id="primaryButton" type="button">
+            <svg id="primaryIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7z"/></svg>
+            <span id="primaryText">Start focusing</span>
+          </button>
+          <button class="button secondary" id="finishButton" type="button" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            <span>Finish focus</span>
+          </button>
+        </div>
+        <p class="keyboard-hint">Press <kbd>Space</kbd> to start or pause</p>
+        </section>
+
+        <aside class="side-panel" aria-label="Recovery and daily summary">
+        <section class="recovery-card" id="recoveryCard">
+          <div class="card-heading">
+            <span id="recoveryHeading">IF YOU STOP NOW</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9c0-2.4-.9-4.6-2.4-6.2M12 7v5l3 2"/><path d="M18 2v5h5"/></svg>
+          </div>
+          <div class="recovery-value"><strong id="recoveryMinutes">3</strong><span>minutes of<br />recovery</span></div>
+          <div class="formula"><span id="focusBasis">starting minimum</span><span>× 20%</span><span>rounded</span></div>
+          <p id="recoveryAdvice">Step away from the task: breathe, hydrate, or stretch lightly.</p>
+          <div class="recovery-progress"><span id="recoveryProgress"></span></div>
+        </section>
+
+        <section class="today-card">
+          <div class="section-title"><h2>Today</h2><span id="todayDate"></span></div>
+          <div class="stats">
+            <div><strong id="todayFocus">0m</strong><span>focused</span></div>
+            <div><strong id="todaySessions">0</strong><span>sessions</span></div>
+            <div><strong id="todayRecovery">0m</strong><span>on breaks</span></div>
+          </div>
+          <div class="history-head"><span>SESSION HISTORY</span><button id="clearHistory" type="button">Clear</button></div>
+          <ol class="history" id="historyList">
+            <li class="empty-history">No sessions yet. Your first one starts here.</li>
+          </ol>
+        </section>
+
+        <details class="why-card">
+          <summary>
+            <span><small>WHY DYNAMIC?</small>An honest formula, not a rigid rule.</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </summary>
+          <div class="why-content">
+            <p>Research has not established one universal break ratio. Luwes uses 20% as a simple heuristic, bounded between 3 and 30 minutes.</p>
+            <ul>
+              <li>Micro-breaks can improve energy and reduce fatigue.</li>
+              <li>Longer breaks tend to support performance more.</li>
+              <li>After long sessions, move and step away from the screen.</li>
+            </ul>
+            <div class="source-links">
+              <a href="https://doi.org/10.1371/journal.pone.0272460" target="_blank" rel="noreferrer">PLOS ONE meta-analysis ↗</a>
+              <a href="https://www.who.int/publications/i/item/9789240014886" target="_blank" rel="noreferrer">WHO guidelines ↗</a>
+            </div>
+          </div>
+        </details>
+        </aside>
+      </div>
+
+      <section id="profileView" class="profile-shell view" aria-labelledby="profileTitle" hidden>
+        <header class="profile-hero">
+          <div>
+            <div class="eyebrow"><span></span><span>PERSONAL · LOCAL ONLY</span></div>
+            <h1 id="profileTitle">Your focus<br /><em>in perspective.</em></h1>
+          </div>
+          <p>See what you did today, how your focus changes across the week, and how recovery is calculated. Nothing leaves this browser.</p>
+        </header>
+
+        <section class="profile-stats" aria-label="Today's activity">
+          <article><span>TODAY'S FOCUS</span><strong id="profileTodayFocus">0m</strong><small id="profileTodayContext">No completed sessions</small></article>
+          <article><span>TODAY'S SESSIONS</span><strong id="profileTodaySessions">0</strong><small>completed focus blocks</small></article>
+          <article><span>ACTUAL BREAKS</span><strong id="profileTodayBreaks">0m</strong><small>recovery time taken</small></article>
+        </section>
+
+        <div class="profile-grid">
+          <section class="profile-card trend-panel" aria-labelledby="trendTitle">
+            <div class="profile-section-head">
+              <div><span>FOCUS TREND</span><h2 id="trendTitle">Last 7 days</h2></div>
+              <strong id="weekTotal">0m total</strong>
+            </div>
+            <ol class="trend-chart" id="trendChart" aria-label="Daily focused minutes for the last seven days"></ol>
+            <p class="chart-summary" id="trendSummary">Complete a session to start your trend.</p>
+          </section>
+
+          <section class="profile-card calculator-panel" aria-labelledby="calculatorTitle">
+            <div class="profile-section-head">
+              <div><span>RECOVERY CALCULATOR</span><h2 id="calculatorTitle">Plan a session</h2></div>
+            </div>
+            <div class="calculator-inputs">
+              <label for="calculatorHours"><span>Hours</span><input id="calculatorHours" type="number" min="0" max="24" value="2" inputmode="numeric" /></label>
+              <label for="calculatorMinutes"><span>Minutes</span><input id="calculatorMinutes" type="number" min="0" max="59" value="0" inputmode="numeric" /></label>
+            </div>
+            <div class="calculator-result" aria-live="polite">
+              <strong id="calculatorBreak">24</strong><span>minutes<br />of recovery</span>
+            </div>
+            <div class="calculation-line" id="calculationLine">120m × 20% = 24m</div>
+            <p id="calculationReason">The result is rounded to the nearest minute.</p>
+            <details class="formula-explainer">
+              <summary>Why is it calculated this way?</summary>
+              <div>
+                <p><strong>1.</strong> Take 20% of the actual focus duration.</p>
+                <p><strong>2.</strong> Round it to the nearest whole minute.</p>
+                <p><strong>3.</strong> Keep it between 3 and 30 minutes.</p>
+                <p>The 20% ratio is a transparent product heuristic—not a universal biological rule. Research supports breaks for fatigue and energy, but does not prescribe one perfect ratio.</p>
+              </div>
+            </details>
+          </section>
+        </div>
+
+        <section class="profile-card activity-panel" aria-labelledby="activityTitle">
+          <div class="profile-section-head">
+            <div><span>ACTIVITY LOG</span><h2 id="activityTitle">All sessions</h2></div>
+            <strong id="activityCount">0 sessions</strong>
+          </div>
+          <ol class="profile-history" id="profileHistory">
+            <li class="profile-empty">No activity yet. Finish a focus session and it will appear here.</li>
+          </ol>
+        </section>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
