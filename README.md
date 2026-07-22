@@ -1,4 +1,4 @@
-# Luwes
+# Dynamic focus timer
 
 A personal, open-ended focus timer that adapts recovery time to the length of the actual focus session. It does not interrupt a productive flow just because a fixed Pomodoro interval has ended.
 
@@ -50,7 +50,7 @@ npm test
 
 ## Personal data and storage
 
-Luwes always stores its current state in the browser's `localStorage`. When signed in, completed sessions are also synced to Supabase for cross-device history and profile totals. Active timers intentionally remain device-local.
+The app always stores its current state in the browser's `localStorage`. When signed in, completed sessions are also synced to Supabase for cross-device history and profile totals. Active timers intentionally remain device-local.
 
 Without an account, it remains fully local:
 

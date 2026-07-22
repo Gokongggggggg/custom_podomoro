@@ -1,5 +1,5 @@
 import { calculateRecoveryMinutes, formatClock, recoveryActivity } from "./recovery.js";
-import { clearCloudSessions, onAuthChange, signIn, signOut, signUp, syncSessions } from "./cloud.js";
+import { clearCloudSessions, onAuthChange, resendVerification, signIn, signOut, signUp, syncSessions } from "./cloud.js";
 
 const STORAGE_KEY = "luwes-focus-v1";
 const DAY_KEY = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" });
@@ -24,6 +24,7 @@ const elements = {
   accountDialog: $("accountDialog"), closeAccountDialog: $("closeAccountDialog"), authForm: $("authForm"),
   emailInput: $("emailInput"), passwordInput: $("passwordInput"), authError: $("authError"),
   signInButton: $("signInButton"), signUpButton: $("signUpButton"), signedOutPanel: $("signedOutPanel"),
+  resendVerificationButton: $("resendVerificationButton"),
   signedInPanel: $("signedInPanel"), accountEmail: $("accountEmail"), syncDetail: $("syncDetail"),
   syncNowButton: $("syncNowButton"), signOutButton: $("signOutButton"),
   profileStorageLabel: $("profileStorageLabel"), profileStorageDescription: $("profileStorageDescription"),
@@ -110,7 +111,7 @@ function showToast(message) {
 function announce(title, body) {
   beep();
   if ("Notification" in window && Notification.permission === "granted") {
-    new Notification(title, { body, tag: "luwes-timer" });
+    new Notification(title, { body, tag: "focus-timer" });
   }
 }
 
@@ -230,10 +231,10 @@ function render(now = Date.now()) {
 
   elements.primaryIcon.innerHTML = state.running ? '<path d="M8 5v14M16 5v14"/>' : '<path d="m8 5 11 7-11 7z"/>';
   document.title = !elements.profileView.hidden
-    ? "Profile · Luwes"
+    ? "Profile · Focus timer"
     : state.mode === "idle"
-      ? "Luwes — focus without a forced cutoff"
-      : `${elements.clock.textContent} · ${isBreak ? "Recover" : "Focus"} · Luwes`;
+      ? "Focus timer — no forced cutoff"
+      : `${elements.clock.textContent} · ${isBreak ? "Recover" : "Focus"}`;
   renderHistory();
 }
 
@@ -444,6 +445,16 @@ elements.signUpButton.addEventListener("click", async () => {
     if (!signedIn) elements.authError.textContent = "Account created. Check your email to confirm it, then sign in.";
   } catch (error) { elements.authError.textContent = error.message; }
   finally { elements.signUpButton.disabled = false; }
+});
+elements.resendVerificationButton.addEventListener("click", async () => {
+  if (!elements.emailInput.reportValidity()) return;
+  elements.authError.textContent = "";
+  elements.resendVerificationButton.disabled = true;
+  try {
+    await resendVerification(elements.emailInput.value.trim());
+    elements.authError.textContent = "Verification email sent. Use the newest link.";
+  } catch (error) { elements.authError.textContent = error.message; }
+  finally { elements.resendVerificationButton.disabled = false; }
 });
 elements.signOutButton.addEventListener("click", async () => {
   elements.signOutButton.disabled = true;

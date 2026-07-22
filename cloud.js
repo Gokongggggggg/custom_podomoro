@@ -2,6 +2,7 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 const SUPABASE_URL = "https://mvlwcifrsbcjlptjjyqe.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_2gRFFKRWHEZDPVQIZjGivA_gniQlGgy";
+const AUTH_REDIRECT_URL = new URL(".", window.location.href).href;
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
@@ -16,9 +17,22 @@ export async function signIn(email, password) {
 }
 
 export async function signUp(email, password) {
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { emailRedirectTo: AUTH_REDIRECT_URL },
+  });
   if (error) throw error;
   return Boolean(data.session);
+}
+
+export async function resendVerification(email) {
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email,
+    options: { emailRedirectTo: AUTH_REDIRECT_URL },
+  });
+  if (error) throw error;
 }
 
 export async function signOut() {
